@@ -1,1 +1,2 @@
-"# wp-simple-contact-form" 
+# WP-Simple-Contact-Form-Wordpress-Plugin
+Public
