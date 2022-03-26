@@ -1,2 +1,1 @@
-# WP-Simple-Contact-Form-Wordpress-Plugin
-Public
+# Simple Contact Form Wordpress Plugin
