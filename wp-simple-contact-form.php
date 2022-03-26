@@ -19,12 +19,14 @@ class WpSimpleContactForm {
     {
         // crate custom post type
         add_action('init', array($this, 'create_custom_post_type'));
-
         // add scripts
         add_action('wp_enqueue_scripts', array($this, 'load_assets'));
-
         // shortcode
         add_shortcode('contact-form', array($this, 'loadShortcode'));
+        // load javascript
+        add_action('wp_footer', array($this, 'load_scripts'));
+        // Register Rest API
+        add_action('rest_api_init', array($this, 'register_rest_api'));
 
 
     }
@@ -71,7 +73,7 @@ class WpSimpleContactForm {
         <div class="simple-contact-form">
             <h1>Send us en Email</h1>
             <p> Please fille the form <p>
-            <form >
+            <form id="simple-contact-form__form">
                 <input type="text" name="name" id="name" placeholder="Nmae">
                 <input type="email" name="email" id="email" placeholder="Email">
                 <input type="tel" name="phone" id="phone" placeholder="Phone">
@@ -81,6 +83,62 @@ class WpSimpleContactForm {
             </form>
         </div>
     <?php }
+
+    public function load_scripts()
+    { ?>
+        <script>
+            (function($){
+
+                var nonce = '<?php echo wp_create_nonce('wp_rest') ?>'
+
+                jQuery('#simple-contact-form__form').submit( function( event ){
+                    event.preventDefault()
+                    
+                    var form = $(this).serialize()
+                    console.log(form);
+
+                    $.ajax({
+                        method: 'post',
+                        url: '<?php echo get_rest_url(null, 'simple-contact-form/v1/send-email'); ?>',
+                        headers: { 'X-WP-Nonce': nonce },
+                        date: form
+                    })
+                })
+
+            })(jQuery)
+        </script>
+    <?php }
+
+    public function register_rest_api()
+    {
+        register_rest_route('simple-contact-form/v1', 'send-email', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'handle_contact_form')
+        ));
+    }
+
+    public function handle_contact_form($data)
+    {
+        $headers = $data->get_headers();
+        $params = $data->get_params();
+        $nonce = $headers['x_wp_nonce'][0];
+
+        if(!wp_verify_nonce($nonce, 'wp_rest')) {
+            return new WP_REST_Response('Message not sent!!', 422);
+        }
+
+        $post_id = wp_insert_post([
+            'post_type' => 'simple_contact_form',
+            'post_title' => 'Contact Enquiry',
+            'post_status' => 'publish'
+        ]);
+
+        if($post_id) {
+            return new WP_REST_Response('Thank you for your email!', 200);
+        }
+    }
+
+
 }
 
 new WpSimpleContactForm;
